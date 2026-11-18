@@ -11,6 +11,7 @@ TESTS := $(sort $(wildcard tests/*-test.sps))
 GHOSTTY_SOURCE := vendor/ghostty
 GHOSTTY_PREFIX := build/ghostty
 GHOSTTY_LIBRARY := $(GHOSTTY_PREFIX)/lib/libghostty-vt.so.0
+ZIG_PACKAGES := $(wildcard vendor/zig-packages/*)
 # A baseline CPU keeps the library runnable on any x86-64 machine; the
 # caches live in build/ so the submodule's working tree stays clean.
 ZIG_OPTIONS := -Demit-lib-vt=true -Doptimize=ReleaseFast -Dcpu=baseline
@@ -23,12 +24,19 @@ build: ghostty build/config.ss
 	$(CAP) timeout $(BUILD_TIMEOUT) $(SCHEME) -q --script build.ss
 
 # Zig decides what is stale in libghostty-vt.
-ghostty:
-	@test "$$($(ZIG) version)" = 0.16.0 || { echo "need Zig 0.16.0" >&2; exit 1; }
-	@mkdir -p build
+ghostty: build/zig-packages.stamp
 	cd $(GHOSTTY_SOURCE) && env ZIG_GLOBAL_CACHE_DIR=$(abspath build/zig-global-cache) \
 	  ZIG_LOCAL_CACHE_DIR=$(abspath build/zig-cache) \
 	  $(CAP) timeout $(BUILD_TIMEOUT) $(ZIG) build $(ZIG_OPTIONS) --prefix $(abspath $(GHOSTTY_PREFIX))
+
+# Zig would download these from three hosts at the first build; loading the
+# copies into its cache first lets a clone build without the network.
+build/zig-packages.stamp: $(ZIG_PACKAGES)
+	@test "$$($(ZIG) version)" = 0.16.0 || { echo "need Zig 0.16.0" >&2; exit 1; }
+	@mkdir -p build
+	cd $(GHOSTTY_SOURCE) && for p in $(abspath $(ZIG_PACKAGES)); do \
+	  env ZIG_GLOBAL_CACHE_DIR=$(abspath build/zig-global-cache) $(ZIG) fetch $$p > /dev/null || exit 1; done
+	touch $@
 
 build/config.ss:
 	@mkdir -p build
