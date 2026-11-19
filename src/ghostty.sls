@@ -3,7 +3,7 @@
     &ghostty ghostty-error? ghostty-error-result ghostty-error-code
 
     make-rgb rgb? rgb-red rgb-green rgb-blue
-    style? style-foreground style-background style-underline-color style-bold? style-italic?
+    make-style style? style-foreground style-background style-underline-color style-bold? style-italic?
     style-faint? style-blink? style-inverse? style-invisible? style-strikethrough?
     style-overline? style-underline
 

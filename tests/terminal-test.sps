@@ -242,6 +242,25 @@
     (terminal-set-kitty-image-temp-directory! t #f)
     (check-equal? #f (terminal-kitty-image-temp-directory t))))
 
+(define (raised-by-make-style? c)
+  (and (assertion-violation? c) (who-condition? c) (eq? 'make-style (condition-who c))))
+
+(test "make-style makes the style a terminal's pen holds, and checks each field"
+  (with-terminal (t 10 3)
+    (terminal-write! t (bytes "\x1b;[1;4:3;38;5;196m"))
+    (check-equal? (make-style 196 #f #f #t #f #f #f #f #f #f #f 'curly) (terminal-cursor-pen t)))
+  (check-equal? (make-rgb 1 2 3)
+    (style-background (make-style #f (make-rgb 1 2 3) 0 #f #f #f #f #f #f #f #f 'none)))
+  (check-raises raised-by-make-style? (make-style 256 #f #f #f #f #f #f #f #f #f #f 'none))
+  (check-raises raised-by-make-style? (make-style #f 'red #f #f #f #f #f #f #f #f #f 'none))
+  (check-raises raised-by-make-style? (make-style #f #f -1 #f #f #f #f #f #f #f #f 'none))
+  (do ([i 3 (fx+ i 1)]) ((fx= i 11))
+    (let ([fields (list #f #f #f #f #f #f #f #f #f #f #f 'none)])
+      (set-car! (list-tail fields i) 1)
+      (check-raises raised-by-make-style? (apply make-style fields))))
+  (check-raises raised-by-make-style? (make-style #f #f #f #f #f #f #f #f #f #f #f 'wavy))
+  (check-raises raised-by-make-style? (make-style #f #f #f #f #f #f #f #f #f #f #f #f)))
+
 (test "direct reads report size, cursor, screen and scrollback"
   (with-terminal (t 10 3)
     (terminal-write! t (bytes "ab\r\ncd"))

@@ -167,9 +167,28 @@
     (do ([i 0 (fx+ i 1)]) ((fx= i 256) bv)
       (rgb-set! bv (fx* 3 i) (vector-ref palette i)))))
 
+(define (check-style-color who x)
+  (check who (or (not x) (u8? x) (rgb? x)) x "#f, a palette index from 0 to 255 or an rgb color"))
+
+(define (check-underline who x)
+  (check who (memq x '(none single double curly dotted dashed)) x
+    "one of none, single, double, curly, dotted and dashed"))
+
 (define-value-record style
   (fields foreground background underline-color bold? italic? faint? blink? inverse? invisible?
-    strikethrough? overline? underline))
+    strikethrough? overline? underline)
+  (protocol
+    (lambda (new)
+      (lambda (foreground background underline-color bold? italic? faint? blink? inverse? invisible?
+               strikethrough? overline? underline)
+        (check-style-color 'make-style foreground)
+        (check-style-color 'make-style background)
+        (check-style-color 'make-style underline-color)
+        (for-each (lambda (flag) (check-boolean 'make-style flag))
+          (list bold? italic? faint? blink? inverse? invisible? strikethrough? overline?))
+        (check-underline 'make-style underline)
+        (new foreground background underline-color bold? italic? faint? blink? inverse? invisible?
+          strikethrough? overline? underline)))))
 
 (define-syntax style-color-ref
   (syntax-rules ()
